@@ -1,0 +1,11 @@
+<p class="score"><strong>Indice de crédibilité :</strong>
+  {% if index.score is not none %}{{ index.score }}{% else %}n/a{% endif %}
+  ({{ index.scored_verdicts }} verdicts notés sur {{ index.active_verdicts }} actifs)
+</p>
+<ul class="counts">
+  <li>Vrai : {{ index.counts.vrai }}</li>
+  <li>Partiellement vrai : {{ index.counts.partiellement_vrai }}</li>
+  <li>Trompeur : {{ index.counts.trompeur }}</li>
+  <li>Faux : {{ index.counts.faux }}</li>
+  <li>Indéterminé : {{ index.counts.indetermine }}</li>
+</ul>

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}CrediVerbi — déclarations{% endblock %}
+{% block content %}
+<h2>Dernières déclarations</h2>
+{% if rows %}
+<table>
+  <thead>
+    <tr><th>Date</th><th>Personne</th><th>Déclaration</th><th>Verdict</th></tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.statement.said_at or row.statement.created_at.date() }}</td>
+      <td><a href="/persons/{{ row.statement.person_id }}">{{ row.statement.person.name }}</a></td>
+      <td><a href="/statements/{{ row.statement.id }}">{{ row.statement.quote[:120] }}{% if row.statement.quote|length > 120 %}…{% endif %}</a></td>
+      <td><span class="badge badge-{{ row.rating or 'none' }}">{{ row.rating_label }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Aucune déclaration enregistrée. <a href="/new/statement">Ajouter la première</a>.</p>
+{% endif %}
+{% endblock %}

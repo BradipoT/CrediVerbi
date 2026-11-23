@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Indices de crédibilité — CrediVerbi{% endblock %}
+{% block content %}
+<h2>Indices de crédibilité</h2>
+<p class="methodology">{{ methodology }}</p>
+<p>Les indices portent sur des <strong>déclarations vérifiées</strong>, jamais sur des personnes en tant que telles, et ne sont ventilés selon aucune autre dimension (notamment pas le genre). Chaque verdict est sourcé, justifié et assorti d'un droit de réponse.</p>
+
+<h3>Personnes</h3>
+{% if persons %}
+<table>
+  <thead>
+    <tr><th>Nom</th><th>Organisation</th><th>Verdicts actifs</th><th>Vrai</th><th>Partiel</th><th>Trompeur</th><th>Faux</th><th>Indét.</th><th>Indice</th></tr>
+  </thead>
+  <tbody>
+    {% for p in persons %}
+    <tr>
+      <td><a href="/persons/{{ p.subject.id }}">{{ p.subject.name }}</a></td>
+      <td>{{ p.subject.organization or "" }}</td>
+      <td>{{ p.active_verdicts }}</td>
+      <td>{{ p.counts.vrai }}</td>
+      <td>{{ p.counts.partiellement_vrai }}</td>
+      <td>{{ p.counts.trompeur }}</td>
+      <td>{{ p.counts.faux }}</td>
+      <td>{{ p.counts.indetermine }}</td>
+      <td>{% if p.score is not none %}{{ p.score }}{% else %}n/a{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Aucune personne enregistrée.</p>
+{% endif %}
+
+<h3>Organisations</h3>
+{% if organizations %}
+<table>
+  <thead>
+    <tr><th>Nom</th><th>Type</th><th>Verdicts actifs</th><th>Vrai</th><th>Partiel</th><th>Trompeur</th><th>Faux</th><th>Indét.</th><th>Indice</th></tr>
+  </thead>
+  <tbody>
+    {% for o in organizations %}
+    <tr>
+      <td>{{ o.subject.name }}</td>
+      <td>{{ o.subject.kind }}</td>
+      <td>{{ o.active_verdicts }}</td>
+      <td>{{ o.counts.vrai }}</td>
+      <td>{{ o.counts.partiellement_vrai }}</td>
+      <td>{{ o.counts.trompeur }}</td>
+      <td>{{ o.counts.faux }}</td>
+      <td>{{ o.counts.indetermine }}</td>
+      <td>{% if o.score is not none %}{{ o.score }}{% else %}n/a{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Aucune organisation enregistrée.</p>
+{% endif %}
+{% endblock %}

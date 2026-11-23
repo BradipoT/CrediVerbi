@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}CrediVerbi{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1><a href="/">CrediVerbi</a></h1>
+    <nav>
+      <a href="/">Déclarations</a>
+      <a href="/index">Indices de crédibilité</a>
+      <a href="/new/statement">Nouvelle déclaration</a>
+      <a href="/new/person">Nouvelle personne</a>
+      <a href="/new/organization">Nouvelle organisation</a>
+    </nav>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+  <footer>
+    <p>On évalue des <strong>déclarations sourcées</strong>, pas des personnes. Chaque verdict exige au moins une source et donne lieu à un <strong>droit de réponse</strong> ; les corrections sont journalisées. Méthodologie publiée sur la page <a href="/index">Indices de crédibilité</a>.</p>
+  </footer>
+</body>
+</html>
