@@ -17,6 +17,19 @@ Stack : Python 3.12, FastAPI, SQLAlchemy 2, PostgreSQL (psycopg), templates Jinj
 - **RGPD** : données minimisées (nom, rôle, organisation), suppression douce (`deleted_at`) via `DELETE /api/persons/{id}`. Avant toute mise en production publique, faire valider la base légale et la politique de conservation par un conseil juridique.
 - **Risque juridique** : en France, traiter publiquement quelqu'un de menteur peut relever de la diffamation/injure. D'où des verdicts factuels, sourcés, avec droit de réponse — et une relecture juridique recommandée avant publication ouverte.
 
+## Flux de modération
+
+Statuts d'une déclaration : `pending` → `published` / `rejected`, puis éventuellement `under_review` → `published` / `removed`.
+
+1. **Proposition publique** : n'importe qui peut proposer une déclaration qu'il estime fausse (`/new/proposal` ou `POST /api/proposals`, sans jeton). Elle est enregistrée avec le statut `pending` et **n'est visible nulle part** (listes, fiches, indices). Aucune donnée personnelle du rapporteur n'est stockée.
+2. **Validation par l'équipe de modération** (détenteurs du jeton `CREDIVERBI_TOKEN`, via `/moderation` ou `POST /api/moderation/statements/{id}/decision`) : approuver publie la déclaration **avec un verdict sourcé obligatoire** (note + justification + au moins une source) ; rejeter la laisse masquée définitivement (`rejected`).
+3. **Dénonciation publique** : toute déclaration publiée peut être dénoncée (`/statements/{id}/new/appeal` ou `POST /api/statements/{id}/appeals`, sans jeton). Elle passe en `under_review` mais **reste affichée tant que son statut n'a pas été réexaminé**.
+4. **Réexamen** (`POST /api/moderation/appeals/{id}/resolve`) : `keep` (dénonciation rejetée, la déclaration reste telle quelle), `update` (publie un nouveau verdict sourcé qui remplace l'actif, journalisé dans l'historique), ou `remove` (retrait définitif, `removed`, invisible partout et toutes les dénonciations en attente sont clôturées). Quand toutes les dénonciations d'une déclaration sont résolues, son statut redevient `published`.
+
+Seules les déclarations `published` et `under_review` sont visibles publiquement et comptées dans les indices de crédibilité.
+
+En production, prévoir une limitation de débit (rate limiting) sur `POST /api/proposals` et `POST /api/statements/{id}/appeals` pour limiter le spam.
+
 ## Lancer en local
 
 ```bash
@@ -43,13 +56,18 @@ Sans Docker, `DATABASE_URL` peut pointer vers n'importe quelle instance PostgreS
 | POST/GET | `/organizations` | Créer / lister les organisations |
 | POST/GET | `/persons`, GET `/persons/{id}` | Créer / lister / détail (avec indice) |
 | DELETE | `/persons/{id}` | Suppression douce (RGPD) |
-| POST/GET | `/statements` | Créer / lister (`?person_id=`, `?rating=`) |
-| GET | `/statements/{id}` | Détail + verdict actif + historique + réponses |
+| POST/GET | `/statements` | Créer (publiée) / lister (`?person_id=`, `?rating=`) — visibles uniquement |
+| GET | `/statements/{id}` | Détail + verdict actif + historique + réponses (404 si non publiée) |
 | POST/GET | `/statements/{id}/verdicts` | Verdict (sources obligatoires, `supersedes` pour corriger) / historique |
 | POST | `/verdicts/{id}/responses` | Droit de réponse |
+| POST | `/proposals` | **Proposition publique** (sans jeton) → statut `pending`, invisible |
+| POST | `/statements/{id}/appeals` | **Dénonciation publique** (sans jeton) → `under_review`, reste visible |
+| GET | `/moderation/pending` | File de modération (jeton requis) : propositions + dénonciations en attente |
+| POST | `/moderation/statements/{id}/decision` | `approve` (publie + verdict sourcé obligatoire) ou `reject` |
+| POST | `/moderation/appeals/{id}/resolve` | `keep` / `update` (nouveau verdict) / `remove` (retrait) |
 | GET | `/index`, `/index/persons/{id}`, `/index/organizations/{id}` | Indices de crédibilité + méthodologie |
 
-L'interface web (server-rendered) reprend les mêmes opérations : `/`, `/statements/{id}`, `/persons/{id}`, `/index`, formulaires `/new/organization`, `/new/person`, `/new/statement`, `/statements/{id}/new/verdict`, `/verdicts/{id}/new/response`.
+L'interface web (server-rendered) reprend les mêmes opérations : `/`, `/statements/{id}`, `/persons/{id}`, `/index`, formulaires publics `/new/proposal` et `/statements/{id}/new/appeal`, formulaires réservés `/new/organization`, `/new/person`, `/new/statement`, `/statements/{id}/new/verdict`, `/verdicts/{id}/new/response`, et la page de modération `/moderation`.
 
 ## Tests
 
@@ -70,7 +88,7 @@ DATABASE_URL=postgresql+psycopg://crediverbi:crediverbi@localhost:5432/crediverb
 app/
   config.py      # settings (env)
   db.py          # moteur SQLAlchemy + session
-  models.py      # schéma : organization, person, statement, verdict, verdict_source, response
+  models.py      # schéma : organization, person, statement, verdict, verdict_source, response, appeal
   schemas.py     # validation pydantic des entrées API
   services.py    # calcul des indices de crédibilité + méthodologie
   main.py        # factory FastAPI

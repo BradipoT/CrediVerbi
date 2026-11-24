@@ -11,6 +11,10 @@
   </p>
   {% if st.context %}<p class="context">{{ st.context }}</p>{% endif %}
   {% if st.source_url %}<p>Source de la déclaration : <a href="{{ st.source_url }}">{{ st.source_title or st.source_url }}</a></p>{% endif %}
+  {% if st.status == 'under_review' %}
+  <p class="warning">Cette déclaration a été dénoncée et est <strong>sous réexamen</strong> : elle reste affichée tant que son statut n'a pas été réexaminé par l'équipe de modération.</p>
+  {% endif %}
+  <p><a href="/statements/{{ st.id }}/new/appeal">Dénoncer cette déclaration</a>{% if open_appeals %} — {{ open_appeals }} dénonciation(s) en attente de réexamen{% endif %}</p>
 </article>
 
 {% if current %}

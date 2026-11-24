@@ -74,10 +74,15 @@ class Statement(Base):
     source_title = Column(String(500), nullable=True)
     said_at = Column(Date, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    status = Column(String(20), nullable=False, default="published", index=True)
+    published_at = Column(DateTime(timezone=True), nullable=True)
 
     person = relationship("Person", back_populates="statements")
     verdicts = relationship(
         "Verdict", back_populates="statement", order_by="Verdict.created_at"
+    )
+    appeals = relationship(
+        "Appeal", back_populates="statement", order_by="Appeal.created_at"
     )
 
 
@@ -121,6 +126,21 @@ class VerdictSource(Base):
     title = Column(String(500), nullable=True)
 
     verdict = relationship("Verdict", back_populates="sources")
+
+
+class Appeal(Base):
+    __tablename__ = "appeal"
+
+    id = Column(Integer, primary_key=True)
+    statement_id = Column(Integer, ForeignKey("statement.id"), nullable=False)
+    reason = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False, default="pending", index=True)
+    resolution = Column(String(30), nullable=True)
+    resolved_by = Column(String(200), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+
+    statement = relationship("Statement", back_populates="appeals")
 
 
 class Response(Base):

@@ -6,6 +6,7 @@ from .. import services
 from ..config import settings
 from ..db import get_db
 from ..models import (
+    Appeal,
     Organization,
     Person,
     Response,
@@ -15,6 +16,9 @@ from ..models import (
     VerdictSource,
 )
 from ..schemas import (
+    AppealCreate,
+    AppealResolve,
+    ModerationDecision,
     OrganizationCreate,
     PersonCreate,
     ResponseCreate,
@@ -74,6 +78,7 @@ def statement_to_dict(statement: Statement, detail: bool = False) -> dict:
     current = services.current_verdict(statement)
     data = {
         "id": statement.id,
+        "status": statement.status,
         "person_id": statement.person_id,
         "person_name": statement.person.name if statement.person else None,
         "organization_name": (
@@ -179,7 +184,14 @@ def list_statements(
     rating: VerdictRating | None = None,
     db: Session = Depends(get_db),
 ):
-    query = db.query(Statement).join(Person).filter(Person.deleted_at.is_(None))
+    query = (
+        db.query(Statement)
+        .join(Person)
+        .filter(
+            Person.deleted_at.is_(None),
+            Statement.status.in_(services.VISIBLE_STATUSES),
+        )
+    )
     if person_id is not None:
         query = query.filter(Statement.person_id == person_id)
     if rating is not None:
@@ -194,7 +206,7 @@ def list_statements(
 @router.get("/statements/{statement_id}")
 def get_statement(statement_id: int, db: Session = Depends(get_db)):
     statement = db.get(Statement, statement_id)
-    if statement is None:
+    if statement is None or statement.status not in services.VISIBLE_STATUSES:
         raise HTTPException(status_code=404, detail="Déclaration inconnue")
     return statement_to_dict(statement, detail=True)
 
@@ -210,6 +222,11 @@ def create_verdict(
     statement = db.get(Statement, statement_id)
     if statement is None:
         raise HTTPException(status_code=404, detail="Déclaration inconnue")
+    if statement.status not in services.VISIBLE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail="Seules les déclarations publiées peuvent recevoir un verdict",
+        )
     superseded = None
     if payload.supersedes is not None:
         superseded = db.get(Verdict, payload.supersedes)
@@ -223,16 +240,9 @@ def create_verdict(
                 detail="Verdict à remplacer invalide : inconnu, déjà remplacé "
                 "ou rattaché à une autre déclaration",
             )
-    verdict = Verdict(
-        statement_id=statement_id,
-        rating=payload.rating,
-        justification=payload.justification,
-        created_by=payload.created_by,
+    verdict = _attach_verdict(
+        db, statement_id, payload.rating, payload.justification, payload.created_by, payload.sources
     )
-    db.add(verdict)
-    db.flush()
-    for source in payload.sources:
-        db.add(VerdictSource(verdict_id=verdict.id, url=source.url, title=source.title))
     if superseded is not None:
         superseded.replaced_by_id = verdict.id
     db.commit()
@@ -296,3 +306,165 @@ def organization_index(organization_id: int, db: Session = Depends(get_db)):
     if index is None:
         raise HTTPException(status_code=404, detail="Organisation inconnue")
     return index
+
+
+def _attach_verdict(db, statement_id, rating, justification, created_by, sources):
+    verdict = Verdict(
+        statement_id=statement_id,
+        rating=rating,
+        justification=justification,
+        created_by=created_by,
+    )
+    db.add(verdict)
+    db.flush()
+    for source in sources:
+        db.add(VerdictSource(verdict_id=verdict.id, url=source.url, title=source.title))
+    return verdict
+
+
+def appeal_to_dict(appeal: Appeal) -> dict:
+    return {
+        "id": appeal.id,
+        "statement_id": appeal.statement_id,
+        "reason": appeal.reason,
+        "status": appeal.status,
+        "resolution": appeal.resolution,
+        "resolved_by": appeal.resolved_by,
+        "created_at": appeal.created_at.isoformat() if appeal.created_at else None,
+        "resolved_at": appeal.resolved_at.isoformat() if appeal.resolved_at else None,
+    }
+
+
+@router.post("/proposals", status_code=201)
+def create_proposal(payload: StatementCreate, db: Session = Depends(get_db)):
+    person = db.get(Person, payload.person_id)
+    if person is None or person.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Personne inconnue")
+    if not person.is_public_figure:
+        raise HTTPException(
+            status_code=400,
+            detail="Seules les personnalités publiques peuvent faire l'objet d'une proposition",
+        )
+    statement = Statement(**payload.model_dump(), status="pending")
+    db.add(statement)
+    db.commit()
+    db.refresh(statement)
+    return statement_to_dict(statement)
+
+
+@router.post("/statements/{statement_id}/appeals", status_code=201)
+def create_appeal(statement_id: int, payload: AppealCreate, db: Session = Depends(get_db)):
+    statement = db.get(Statement, statement_id)
+    if statement is None or statement.status not in services.VISIBLE_STATUSES:
+        raise HTTPException(status_code=404, detail="Déclaration inconnue")
+    appeal = Appeal(statement_id=statement_id, reason=payload.reason)
+    db.add(appeal)
+    if statement.status == "published":
+        statement.status = "under_review"
+    db.commit()
+    db.refresh(appeal)
+    return appeal_to_dict(appeal)
+
+
+def _recompute_statement_status(db: Session, statement: Statement) -> None:
+    db.flush()
+    if statement.status == "under_review":
+        remaining = (
+            db.query(Appeal)
+            .filter(Appeal.statement_id == statement.id, Appeal.status == "pending")
+            .count()
+        )
+        if remaining == 0:
+            statement.status = "published"
+
+
+@router.get("/moderation/pending", dependencies=[Depends(require_editor)])
+def moderation_pending(db: Session = Depends(get_db)):
+    statements = (
+        db.query(Statement)
+        .filter(Statement.status == "pending")
+        .order_by(Statement.created_at)
+        .all()
+    )
+    appeals = (
+        db.query(Appeal)
+        .filter(Appeal.status == "pending")
+        .order_by(Appeal.created_at)
+        .all()
+    )
+    return {
+        "statements": [statement_to_dict(s) for s in statements],
+        "appeals": [appeal_to_dict(a) for a in appeals],
+    }
+
+
+@router.post(
+    "/moderation/statements/{statement_id}/decision",
+    dependencies=[Depends(require_editor)],
+)
+def moderation_decision(
+    statement_id: int, payload: ModerationDecision, db: Session = Depends(get_db)
+):
+    statement = db.get(Statement, statement_id)
+    if statement is None or statement.status != "pending":
+        raise HTTPException(status_code=404, detail="Proposition inconnue ou déjà traitée")
+    if payload.action == "approve":
+        _attach_verdict(
+            db,
+            statement.id,
+            payload.rating,
+            payload.justification,
+            payload.decided_by,
+            payload.sources,
+        )
+        statement.status = "published"
+        statement.published_at = func.now()
+    else:
+        statement.status = "rejected"
+    db.commit()
+    db.refresh(statement)
+    return statement_to_dict(statement, detail=True)
+
+
+@router.post(
+    "/moderation/appeals/{appeal_id}/resolve",
+    dependencies=[Depends(require_editor)],
+)
+def resolve_appeal(
+    appeal_id: int, payload: AppealResolve, db: Session = Depends(get_db)
+):
+    appeal = db.get(Appeal, appeal_id)
+    if appeal is None or appeal.status != "pending":
+        raise HTTPException(status_code=404, detail="Dénonciation inconnue ou déjà résolue")
+    statement = appeal.statement
+    if payload.resolution == "remove":
+        statement.status = "removed"
+        for other in statement.appeals:
+            if other.status == "pending":
+                other.status = "resolved"
+                other.resolution = "removed"
+                other.resolved_by = payload.resolved_by
+                other.resolved_at = func.now()
+    else:
+        if payload.resolution == "update":
+            verdict = _attach_verdict(
+                db,
+                statement.id,
+                payload.rating,
+                payload.justification,
+                payload.resolved_by,
+                payload.sources,
+            )
+            current = services.current_verdict(statement)
+            if current is not None:
+                current.replaced_by_id = verdict.id
+            appeal.resolution = "verdict_updated"
+        else:
+            appeal.resolution = "kept"
+        appeal.status = "resolved"
+        appeal.resolved_by = payload.resolved_by
+        appeal.resolved_at = func.now()
+        _recompute_statement_status(db, statement)
+    db.commit()
+    db.refresh(appeal)
+    return appeal_to_dict(appeal)

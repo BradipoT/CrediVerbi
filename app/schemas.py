@@ -1,6 +1,7 @@
 from datetime import date
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .models import VerdictRating
 
@@ -43,3 +44,43 @@ class ResponseCreate(BaseModel):
     author_name: str = Field(min_length=1, max_length=200)
     author_capacity: str | None = Field(default=None, max_length=200)
     content: str = Field(min_length=1)
+
+
+class AppealCreate(BaseModel):
+    reason: str = Field(min_length=1)
+
+
+class ModerationDecision(BaseModel):
+    action: Literal["approve", "reject"]
+    rating: VerdictRating | None = None
+    justification: str | None = None
+    sources: list[SourceCreate] = Field(default_factory=list)
+    decided_by: str | None = Field(default=None, max_length=200)
+
+    @model_validator(mode="after")
+    def _check_approve(self):
+        if self.action == "approve" and (
+            self.rating is None or not (self.justification or "").strip() or not self.sources
+        ):
+            raise ValueError(
+                "Approuver exige un verdict complet : note + justification + au moins une source"
+            )
+        return self
+
+
+class AppealResolve(BaseModel):
+    resolution: Literal["keep", "update", "remove"]
+    rating: VerdictRating | None = None
+    justification: str | None = None
+    sources: list[SourceCreate] = Field(default_factory=list)
+    resolved_by: str | None = Field(default=None, max_length=200)
+
+    @model_validator(mode="after")
+    def _check_update(self):
+        if self.resolution == "update" and (
+            self.rating is None or not (self.justification or "").strip() or not self.sources
+        ):
+            raise ValueError(
+                "Modifier le verdict exige un verdict complet : note + justification + au moins une source"
+            )
+        return self

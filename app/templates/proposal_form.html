@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Proposer une déclaration — CrediVerbi{% endblock %}
+{% block content %}
+<h2>Proposer une déclaration que vous estimez fausse</h2>
+<p>Cette proposition <strong>n'est pas visible publiquement</strong> : elle part en file de modération. Si l'équipe de modération la valide comme erronée, elle est publiée avec un verdict sourcé. Aucune donnée personnelle vous concernant n'est enregistrée.</p>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+{% if persons %}
+<form method="post" action="/new/proposal">
+  <label>Personne concernée
+    <select name="person_id" required>
+      {% for p in persons %}
+      <option value="{{ p.id }}">{{ p.name }}{% if p.organization %} ({{ p.organization.name }}){% endif %}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Déclaration (verbatim) <textarea name="quote" required rows="3"></textarea></label>
+  <label>Contexte <textarea name="context" rows="2"></textarea></label>
+  <label>URL de la source (où la déclaration a été faite) <input type="url" name="source_url"></label>
+  <label>Titre de la source <input type="text" name="source_title" maxlength="500"></label>
+  <label>Date de la déclaration <input type="date" name="said_at"></label>
+  <button type="submit">Envoyer à la modération</button>
+</form>
+{% else %}
+<p>Aucune personnalité publique enregistrée pour l'instant.</p>
+{% endif %}
+{% endblock %}

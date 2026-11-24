@@ -15,6 +15,8 @@ RATING_SCORES = {
     VerdictRating.FAUX: 0.0,
 }
 
+VISIBLE_STATUSES = ("published", "under_review")
+
 METHODOLOGY = (
     "Indice = moyenne des notes des verdicts actifs de la personne ou de "
     "l'organisation : vrai = 1,0 ; partiellement vrai = 0,5 ; trompeur = 0,25 ; "
@@ -65,7 +67,8 @@ def person_index(db: Session, person_id: int) -> dict | None:
         "role": person.role,
         "organization": person.organization.name if person.organization else None,
     }
-    return _build_index(person.statements, subject)
+    statements = [s for s in person.statements if s.status in VISIBLE_STATUSES]
+    return _build_index(statements, subject)
 
 
 def organization_index(db: Session, organization_id: int) -> dict | None:
@@ -75,7 +78,11 @@ def organization_index(db: Session, organization_id: int) -> dict | None:
     statements = (
         db.query(Statement)
         .join(Person)
-        .filter(Person.organization_id == org.id, Person.deleted_at.is_(None))
+        .filter(
+            Person.organization_id == org.id,
+            Person.deleted_at.is_(None),
+            Statement.status.in_(VISIBLE_STATUSES),
+        )
         .all()
     )
     subject = {"type": "organization", "id": org.id, "name": org.name, "kind": org.kind}
