@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Dénoncer une déclaration — CrediVerbi{% endblock %}
+{% block content %}
+<h2>Dénoncer la déclaration #{{ st.id }}</h2>
+<blockquote>{{ st.quote }}</blockquote>
+<p>Une dénonciation déclenche un <strong>réexamen</strong> par l'équipe de modération. Tant que son statut n'a pas été réexaminé, la déclaration <strong>reste affichée</strong>. Après réexamen, son verdict peut être modifié ou elle peut être retirée. Aucune donnée personnelle n'est enregistrée.</p>
+<form method="post" action="/statements/{{ st.id }}/new/appeal">
+  <label>Motif de la dénonciation <textarea name="reason" required rows="4"></textarea></label>
+  <button type="submit">Envoyer la dénonciation</button>
+</form>
+{% endblock %}

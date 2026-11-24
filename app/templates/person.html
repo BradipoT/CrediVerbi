@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ index.subject.name }} — CrediVerbi{% endblock %}
+{% block content %}
+<h2>{{ index.subject.name }}{% if index.subject.role %} — {{ index.subject.role }}{% endif %}</h2>
+{% if index.subject.organization %}<p>Organisation : {{ index.subject.organization }}</p>{% endif %}
+{% include "_index_summary.html" %}
+<h3>Déclarations</h3>
+{% if rows %}
+<table>
+  <thead><tr><th>Date</th><th>Déclaration</th><th>Verdict</th></tr></thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.statement.said_at or row.statement.created_at.date() }}</td>
+      <td><a href="/statements/{{ row.statement.id }}">{{ row.statement.quote[:120] }}{% if row.statement.quote|length > 120 %}…{% endif %}</a></td>
+      <td><span class="badge badge-{{ row.rating or 'none' }}">{{ row.rating_label }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Aucune déclaration enregistrée.</p>
+{% endif %}
+{% endblock %}

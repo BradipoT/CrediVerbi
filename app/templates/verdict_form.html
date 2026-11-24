@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Verdict — déclaration #{{ st.id }} — CrediVerbi{% endblock %}
+{% block content %}
+<h2>{% if supersedes %}Correction du verdict #{{ supersedes }}{% else %}Nouveau verdict{% endif %} — déclaration #{{ st.id }}</h2>
+<blockquote>{{ st.quote }}</blockquote>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post" action="/statements/{{ st.id }}/new/verdict">
+  {% if supersedes %}<input type="hidden" name="supersedes" value="{{ supersedes }}">{% endif %}
+  <label>Verdict
+    <select name="rating" required>
+      {% for value, label in ratings.items() %}
+      <option value="{{ value }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Justification (obligatoire) <textarea name="justification" required rows="4"></textarea></label>
+  <label>Sources du verdict (obligatoires, une URL par ligne) <textarea name="sources_text" required rows="4" placeholder="https://exemple.fr/article"></textarea></label>
+  <label>Vérifié par <input type="text" name="created_by" maxlength="200"></label>
+  <button type="submit">Publier le verdict</button>
+</form>
+{% endblock %}

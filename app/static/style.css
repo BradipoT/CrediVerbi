@@ -1,0 +1,27 @@
+body { font-family: system-ui, sans-serif; margin: 0; color: #1a1a1a; }
+header { background: #14213d; color: #fff; padding: 0.8rem 1.2rem; display: flex; gap: 2rem; align-items: baseline; flex-wrap: wrap; }
+header h1 { font-size: 1.3rem; margin: 0; }
+header a { color: #fff; text-decoration: none; }
+nav a { margin-right: 1rem; }
+main { padding: 1.2rem; max-width: 64rem; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+blockquote { border-left: 4px solid #14213d; margin: 0.5rem 0; padding: 0.4rem 1rem; background: #f4f6fb; }
+.badge { padding: 0.15rem 0.5rem; border-radius: 0.4rem; color: #fff; font-size: 0.85rem; white-space: nowrap; }
+.badge-vrai { background: #1b7f4d; }
+.badge-partiellement_vrai { background: #7aa82e; }
+.badge-trompeur { background: #c07f10; }
+.badge-faux { background: #b3261e; }
+.badge-indetermine { background: #6b7280; }
+.badge-none { background: #9ca3af; }
+form label { display: block; margin-bottom: 0.8rem; font-weight: 600; }
+input[type=text], input[type=url], input[type=date], select, textarea { display: block; width: 100%; max-width: 34rem; padding: 0.35rem; font-weight: 400; margin-top: 0.2rem; }
+button { padding: 0.5rem 1rem; }
+.error { color: #b3261e; font-weight: 600; }
+.warning { color: #b3261e; font-weight: 600; background: #fdecea; padding: 0.5rem 0.8rem; border-radius: 0.4rem; }
+.mod-item { border: 1px solid #ddd; border-radius: 0.4rem; padding: 0.6rem 1rem; margin-bottom: 0.8rem; }
+.meta { color: #555; font-size: 0.9rem; }
+.methodology { background: #eef2f7; padding: 0.6rem 1rem; border-radius: 0.4rem; }
+.counts { list-style: none; padding: 0; display: flex; gap: 1.2rem; flex-wrap: wrap; }
+.response { border: 1px solid #ddd; border-radius: 0.4rem; padding: 0.4rem 1rem; margin-bottom: 0.6rem; background: #fafafa; }
+footer { padding: 1rem 1.2rem; color: #666; font-size: 0.85rem; border-top: 1px solid #eee; }

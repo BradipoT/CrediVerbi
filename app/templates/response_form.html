@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Droit de réponse — CrediVerbi{% endblock %}
+{% block content %}
+<h2>Droit de réponse — verdict #{{ verdict.id }}</h2>
+<blockquote>{{ verdict.statement.quote }}</blockquote>
+<form method="post" action="/verdicts/{{ verdict.id }}/new/response">
+  <label>Nom de l'auteur <input type="text" name="author_name" required maxlength="200"></label>
+  <label>Capacité (ex. « porte-parole de… ») <input type="text" name="author_capacity" maxlength="200"></label>
+  <label>Réponse <textarea name="content" required rows="5"></textarea></label>
+  <button type="submit">Publier la réponse</button>
+</form>
+{% endblock %}

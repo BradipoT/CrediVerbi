@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Nouvelle déclaration — CrediVerbi{% endblock %}
+{% block content %}
+<h2>Nouvelle déclaration</h2>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+{% if persons %}
+<form method="post" action="/new/statement">
+  <label>Personne
+    <select name="person_id" required>
+      {% for p in persons %}
+      <option value="{{ p.id }}">{{ p.name }}{% if p.organization %} ({{ p.organization.name }}){% endif %}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Déclaration (verbatim) <textarea name="quote" required rows="3"></textarea></label>
+  <label>Contexte <textarea name="context" rows="2"></textarea></label>
+  <label>URL de la source <input type="url" name="source_url"></label>
+  <label>Titre de la source <input type="text" name="source_title" maxlength="500"></label>
+  <label>Date de la déclaration <input type="date" name="said_at"></label>
+  <button type="submit">Enregistrer</button>
+</form>
+{% else %}
+<p>Aucune personnalité publique enregistrée. <a href="/new/person">Ajouter une personne d'abord</a>.</p>
+{% endif %}
+{% endblock %}

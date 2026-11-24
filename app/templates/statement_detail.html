@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Déclaration #{{ st.id }} — CrediVerbi{% endblock %}
+{% block content %}
+<article>
+  <blockquote>{{ st.quote }}</blockquote>
+  <p class="meta">
+    <a href="/persons/{{ st.person_id }}">{{ st.person.name }}</a>
+    {% if st.person.role %} — {{ st.person.role }}{% endif %}
+    {% if st.person.organization %} ({{ st.person.organization.name }}){% endif %}
+    {% if st.said_at %} — le {{ st.said_at }}{% endif %}
+  </p>
+  {% if st.context %}<p class="context">{{ st.context }}</p>{% endif %}
+  {% if st.source_url %}<p>Source de la déclaration : <a href="{{ st.source_url }}">{{ st.source_title or st.source_url }}</a></p>{% endif %}
+  {% if st.status == 'under_review' %}
+  <p class="warning">Cette déclaration a été dénoncée et est <strong>sous réexamen</strong> : elle reste affichée tant que son statut n'a pas été réexaminé par l'équipe de modération.</p>
+  {% endif %}
+  <p><a href="/statements/{{ st.id }}/new/appeal">Dénoncer cette déclaration</a>{% if open_appeals %} — {{ open_appeals }} dénonciation(s) en attente de réexamen{% endif %}</p>
+</article>
+
+{% if current %}
+<section class="verdict">
+  <h3>Verdict : <span class="badge badge-{{ current.rating.value }}">{{ rating_labels[current.rating] }}</span></h3>
+  <p>{{ current.justification }}</p>
+  {% if current.created_by %}<p class="meta">Vérifié par {{ current.created_by }} le {{ current.created_at.date() }}</p>{% endif %}
+  <ul>
+    {% for src in current.sources %}
+    <li><a href="{{ src.url }}">{{ src.title or src.url }}</a></li>
+    {% endfor %}
+  </ul>
+  <p>
+    <a href="/verdicts/{{ current.id }}/new/response">Exercer un droit de réponse</a>
+    — <a href="/statements/{{ st.id }}/new/verdict?supersedes={{ current.id }}">Corriger ce verdict</a>
+  </p>
+  {% if current.responses %}
+  <h4>Droits de réponse publiés</h4>
+  {% for r in current.responses %}
+  <div class="response">
+    <p>{{ r.content }}</p>
+    <p class="meta">{{ r.author_name }}{% if r.author_capacity %} — {{ r.author_capacity }}{% endif %}, le {{ r.created_at.date() }}</p>
+  </div>
+  {% endfor %}
+  {% endif %}
+</section>
+{% else %}
+<p>Aucun verdict pour l'instant. <a href="/statements/{{ st.id }}/new/verdict">Évaluer cette déclaration</a> (au moins une source requise).</p>
+{% endif %}
+
+{% if st.verdicts %}
+<section>
+  <h3>Historique des verdicts</h3>
+  <ol>
+    {% for v in st.verdicts %}
+    <li>
+      {{ v.created_at.date() }} — <span class="badge badge-{{ v.rating.value }}">{{ rating_labels[v.rating] }}</span>
+      {% if v.replaced_by_id is none %}<strong>verdict actif</strong>{% else %}remplacé par le verdict #{{ v.replaced_by_id }}{% endif %}
+      : {{ v.justification }}
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endif %}
+{% endblock %}
